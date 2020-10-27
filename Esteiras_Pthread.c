@@ -1,38 +1,135 @@
 ﻿#include <pthread.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
 
-#define TAM 100
+#define TAM 1500
 
 pthread_mutex_t lock;
+int thread_complete;
 
 struct Products{
 	int nItens;
 	int weight[TAM];
 };
 
-/* this function is run by the threads */
+int kbhit(void)
+{
+	struct termios oldt, newt;
+	int ch;
+	int oldf;
+	
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+	
+	ch = getchar();
+	
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	fcntl(STDIN_FILENO, F_SETFL, oldf);
+	
+	if(ch != EOF)
+	{
+		ungetc(ch, stdin);
+		return 1;
+	}
+	
+	return 0;
+}
+
+int simulaEntrada(){
+	int r = rand()%10;
+	if(r == 0)
+		return 1;
+	else
+		return 0; 
+}
+
 void *inc(void *arguments){
-    /* increment x to 100 */
     struct Products *p = (struct Products *)arguments;
 
     while(p->nItens < TAM){
-		pthread_mutex_lock(&lock);
-		if(p->nItens < TAM){
-			p->weight[p->nItens ] = rand() % 10 + 1;
-			p->nItens += 1;
+		if(simulaEntrada()){
+			pthread_mutex_lock(&lock);
+			if(p->nItens < TAM){
+				p->weight[p->nItens ] = rand() % 10 + 1;
+				p->nItens += 1;
+			}
+			pthread_mutex_unlock(&lock);
 		}
-		
-		//printf("%lu - %d\n", pthread_self(), p->nItens);
-		pthread_mutex_unlock(&lock);
-
-		//delay(10);
 	}
 	
-    /* the function must return something - NULL will do */
+	thread_complete = 1;
+
     return NULL;
 }
+
+/*
+void *inc2(void *arguments){
+    struct Products *p = (struct Products *)arguments;
+
+    while(p->nItens < TAM){
+		if(kbhit()){
+			if(getchar() == 'q'){
+				pthread_mutex_lock(&lock);
+				p->weight[p->nItens ] = rand() % 10 + 1;
+				p->nItens += 1;
+				pthread_mutex_unlock(&lock);
+				printf("Thread %lu: %d\n",  pthread_self(), p->nItens);
+			}
+		}
+	}
+	
+	thread_complete = 1;
+
+    return NULL;
+}
+
+void *inc3(void *arguments){
+    struct Products *p = (struct Products *)arguments;
+
+    while(p->nItens < TAM){
+		if(kbhit()){
+			if(getchar() == 'w'){
+				pthread_mutex_lock(&lock);
+				p->weight[p->nItens ] = rand() % 10 + 1;
+				p->nItens += 1;
+				pthread_mutex_unlock(&lock);
+				printf("Thread %lu: %d\n",  pthread_self(), p->nItens);
+			}
+		}
+	}
+	
+	thread_complete = 1;
+
+    return NULL;
+}
+
+void *inc4(void *arguments){
+    struct Products *p = (struct Products *)arguments;
+
+    while(p->nItens < TAM){
+		if(kbhit()){
+			if(getchar() == 'e'){
+				pthread_mutex_lock(&lock);
+				p->weight[p->nItens ] = rand() % 10 + 1;
+				p->nItens += 1;
+				pthread_mutex_unlock(&lock);
+				//printf("Thread %lu: %d\n",  pthread_self(), p->nItens);
+			}
+		}
+	}
+	
+	thread_complete = 1;
+
+    return NULL;
+}
+*/
 
 int sum(int array[]){
 	int sum = 0, i;
@@ -48,19 +145,19 @@ int main(){
 	clock_t start, finish;
 	double time;
 
-	start = clock();
-
     struct Products p;
+	int pesoTotal = 0;
 	
 	//char stop = 's';
 	int i = 0;
-	while(i < 5){
+	while(i < 1){
 		if(pthread_mutex_init(&lock, NULL) != 0){
 			printf("\nMutex init failed.\n");
 			return 1;
 		}
 
 		p.nItens = 0;
+		thread_complete = 0;
 
 		/* this variable is our reference to the second thread */
 		pthread_t thread_2, thread_3, thread_4;
@@ -85,7 +182,7 @@ int main(){
 			printf("Thread 4 Criada\n");
 
 		/* increment y to 100 in the first thread */
-		while(p.nItens < TAM){
+		while(!thread_complete){
 			printf("Number of Itens: %d\n", p.nItens);
 		}
 
@@ -93,31 +190,39 @@ int main(){
 		if(pthread_join(thread_2, NULL)) {
 			fprintf(stderr, "Error joining thread\n");
 			return 2;
-		}
+		}else
+			printf("Thread 2 foi destruida.\n");
 		if(pthread_join(thread_3, NULL)) {
 			fprintf(stderr, "Error joining thread\n");
 			return 2;
-		}
+		}else
+			printf("Thread 3 foi destruida.\n");
 		if(pthread_join(thread_4, NULL)) {
 			fprintf(stderr, "Error joining thread\n");
 			return 2;
-		}
+		}else
+			printf("Thread 4 foi destruida.\n");
 
+		start = clock();
+		
+		pesoTotal += sum(p.weight);
+		
 		/* show the results - x is now 100 thanks to the second thread */
 		printf("Number of Itens: %d\n", p.nItens);
-		printf("Peso total: %d\n", sum(p.weight));
+		printf("Peso total: %d\n", pesoTotal);
+		
 
 		pthread_mutex_destroy(&lock);
+
+		finish = clock();
+
+		time = ((double) (finish - start)) / CLOCKS_PER_SEC;
+
+		printf("Tempo: %f\n", time);
 
 		//scanf("%s", &stop);
 		i++;
 	}
-
-	finish = clock();
-
-	time = ((double) (finish - start)) / CLOCKS_PER_SEC;
-
-	printf("Tempo: %f\n", time);
 
     return 0;
 }
