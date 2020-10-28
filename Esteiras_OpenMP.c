@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <omp.h>
+#include <time.h>
 
-#define TAM 800
+#define TAM 1500
 
 int simulaEntrada(){
 	int r = rand()%10;
@@ -22,35 +23,62 @@ int sum(int array[]){
 int main(int argc, char** argv){
     srand(time(NULL));
 
-    int nItens = 0, weight[TAM];
+    clock_t start, finish;
+	double time;
 
-    #pragma omp parallel shared(nItens, weight) num_threads(4) 
-	{
-        #pragma omp single nowait
+    int nItens, weight[TAM], pesoTotal;
+
+    int i = 0;
+    while(i < 1){
+        nItens = 0;
+        pesoTotal = 0;
+
+        #pragma omp parallel shared(nItens, weight) num_threads(4) 
         {
-            printf("Criei Thread: %d\n", omp_get_thread_num());
-            while(nItens < TAM){
-                printf("Number of itens: %d - %d\n", nItens, omp_get_thread_num());
+            #pragma omp single nowait
+            {
+                printf("Thread %d criada.\n", omp_get_thread_num());
+                while(nItens < TAM){
+                    printf("Number of itens: %d\n", nItens);
+                }
             }
-        }
 
-        printf("Criei Thread: %d\n", omp_get_thread_num());
-        while(nItens < TAM){
-            if(simulaEntrada()){
-                #pragma omp critical
-                {   
-                    if(nItens < TAM){
-                        weight[nItens] = rand() % 10 + 1;
-                        nItens += 1;
-                        printf("Thread: %d\n", omp_get_thread_num());
+            //para nao printar que ta criando a thread do lcd
+            if(nItens < TAM){
+                printf("Thread %d criada.\n", omp_get_thread_num());
+            }
+            while(nItens < TAM){
+                if(simulaEntrada()){
+                    #pragma omp critical
+                    {   
+                        if(nItens < TAM){
+                            weight[nItens] = rand() % 10 + 1;
+                            nItens += 1;
+                            //printf("Thread: %d\n", omp_get_thread_num());
+                        }
                     }
                 }
             }
-        }
-	}
 
-    printf("Number of itens: %d\n", nItens);
-    printf("Peso total: %d\n", sum(weight));
+            printf("Thread %d destruida.\n", omp_get_thread_num());
+        }
+
+        start = clock();
+
+        pesoTotal += sum(weight);
+
+        printf("Number of itens: %d\n", nItens);
+        printf("Peso total: %d\n", pesoTotal);
+
+        finish = clock();
+
+        time = ((double) (finish - start)) / CLOCKS_PER_SEC;
+
+        printf("Tempo: %f\n", time);
+
+        i++;
+    }
+    
 
     return 0;
 }

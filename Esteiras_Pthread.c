@@ -15,8 +15,36 @@ struct Products{
 	int weight[TAM];
 };
 
-int kbhit(void)
-{
+int simulaEntrada(){
+	int r = rand()%10;
+	if(r == 0)
+		return 1;
+	else
+		return 0; 
+}
+
+void *inc(void *arguments){
+    struct Products *p = (struct Products *)arguments;
+
+    while(p->nItens < TAM){
+		if(simulaEntrada()){
+			pthread_mutex_lock(&lock);
+			if(p->nItens < TAM){
+				p->weight[p->nItens ] = rand() % 10 + 1;
+				p->nItens += 1;
+			}
+			//printf("Thread %lu\n",  pthread_self());
+			pthread_mutex_unlock(&lock);
+		}
+	}
+	
+	thread_complete = 1;
+
+    return NULL;
+}
+
+/*
+int kbhit(void){
 	struct termios oldt, newt;
 	int ch;
 	int oldf;
@@ -42,34 +70,6 @@ int kbhit(void)
 	return 0;
 }
 
-int simulaEntrada(){
-	int r = rand()%10;
-	if(r == 0)
-		return 1;
-	else
-		return 0; 
-}
-
-void *inc(void *arguments){
-    struct Products *p = (struct Products *)arguments;
-
-    while(p->nItens < TAM){
-		if(simulaEntrada()){
-			pthread_mutex_lock(&lock);
-			if(p->nItens < TAM){
-				p->weight[p->nItens ] = rand() % 10 + 1;
-				p->nItens += 1;
-			}
-			pthread_mutex_unlock(&lock);
-		}
-	}
-	
-	thread_complete = 1;
-
-    return NULL;
-}
-
-/*
 void *inc2(void *arguments){
     struct Products *p = (struct Products *)arguments;
 
@@ -142,12 +142,13 @@ int sum(int array[]){
 int main(){
 	srand(time(NULL));
 
-	clock_t start, finish;
-	double time;
+	clock_t start, finish, startTotal, finishTotal;
+	double time, timeThreads, timeTotal;
 
     struct Products p;
 	int pesoTotal = 0;
 	
+	startTotal = clock();
 	//char stop = 's';
 	int i = 0;
 	while(i < 1){
@@ -158,6 +159,8 @@ int main(){
 
 		p.nItens = 0;
 		thread_complete = 0;
+
+		start = clock();
 
 		/* this variable is our reference to the second thread */
 		pthread_t thread_2, thread_3, thread_4;
@@ -203,6 +206,10 @@ int main(){
 		}else
 			printf("Thread 4 foi destruida.\n");
 
+		finish = clock();
+
+		timeThreads = ((double) (finish - start)) / CLOCKS_PER_SEC;
+
 		start = clock();
 		
 		pesoTotal += sum(p.weight);
@@ -218,11 +225,17 @@ int main(){
 
 		time = ((double) (finish - start)) / CLOCKS_PER_SEC;
 
-		printf("Tempo: %f\n", time);
+		printf("Tempo threads: %f\n", timeThreads);
+		printf("Tempo soma: %f\n", time);
 
 		//scanf("%s", &stop);
 		i++;
 	}
+	finishTotal = clock();
+
+	timeTotal = ((double) (finishTotal - startTotal)) / CLOCKS_PER_SEC;
+
+	printf("Tempo total: %f\n", timeTotal);
 
     return 0;
 }
