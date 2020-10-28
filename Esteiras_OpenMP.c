@@ -23,10 +23,12 @@ int sum(int array[]){
 int main(int argc, char** argv){
     srand(time(NULL));
 
-    clock_t start, finish;
-	double time;
+    clock_t start, finish, startTotal, finishTotal;
+	double time, timeThreads, timeTotal;
 
     int nItens, weight[TAM], pesoTotal;
+
+    startTotal = clock();
 
     int i = 0;
     while(i < 1){
@@ -42,6 +44,8 @@ int main(int argc, char** argv){
                     printf("Number of itens: %d\n", nItens);
                 }
             }
+
+            start = clock();
 
             //para nao printar que ta criando a thread do lcd
             if(nItens < TAM){
@@ -61,7 +65,11 @@ int main(int argc, char** argv){
             }
 
             printf("Thread %d destruida.\n", omp_get_thread_num());
+
+            finish = clock();
         }
+
+        timeThreads = ((double) (finish - start)) / CLOCKS_PER_SEC;
 
         start = clock();
 
@@ -74,11 +82,16 @@ int main(int argc, char** argv){
 
         time = ((double) (finish - start)) / CLOCKS_PER_SEC;
 
+        printf("Tempo threads: %f\n", timeThreads);
         printf("Tempo: %f\n", time);
 
         i++;
     }
-    
+    finishTotal = clock();
+
+	timeTotal = ((double) (finishTotal - startTotal)) / CLOCKS_PER_SEC;
+
+	printf("Tempo total: %f\n", timeTotal);
 
     return 0;
 }

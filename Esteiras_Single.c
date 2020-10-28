@@ -1,19 +1,7 @@
-#include <pthread.h>
 #include <stdio.h>
 #include <time.h>
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
 
 #define TAM 1500
-
-pthread_mutex_t lock;
-int thread_complete;
-
-struct Products{
-	int nItens;
-	int weight[TAM];
-};
 
 int simulaEntrada(){
 	int r = rand()%10;
@@ -37,24 +25,23 @@ int main(){
 	clock_t start, finish, startTotal, finishTotal;
 	double time, timeThreads, timeTotal;
 
-    struct Products p;
+    int nItens;
+	int weight[TAM];
 	int pesoTotal = 0;
 	
 	startTotal = clock();
-	//char stop = 's';
+
 	int i = 0;
 	while(i < 1){
-		p.nItens = 0;
-		thread_complete = 0;
+		nItens = 0;
 
 		start = clock();
 
-		/* increment y to 100 in the first thread */
-		while(p.nItens < TAM){
-			printf("Number of Itens: %d\n", p.nItens);
+		while(nItens < TAM){
+			printf("Number of Itens: %d\n", nItens);
             if(simulaEntrada()){
-				p.weight[p.nItens ] = rand() % 10 + 1;
-				p.nItens += 1;
+				weight[nItens ] = rand() % 10 + 1;
+				nItens += 1;
 			}
 		}
 
@@ -64,10 +51,9 @@ int main(){
 
 		start = clock();
 		
-		pesoTotal += sum(p.weight);
+		pesoTotal += sum(weight);
 		
-		/* show the results - x is now 100 thanks to the second thread */
-		printf("Number of Itens: %d\n", p.nItens);
+		printf("Number of Itens: %d\n", nItens);
 		printf("Peso total: %d\n", pesoTotal);
 
 		finish = clock();
